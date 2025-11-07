@@ -1,0 +1,12 @@
+[DEFAULT]
+client_id=YOUR_CLIENT_ID
+client_secret=YOUR_CLIENT_SECRET
+user_agent=reddit-cmf by u/YOUR_USERNAME
+username=YOUR_USERNAME
+password=YOUR_PASSWORD
+
+# 사용법:
+# 1) 이 파일을 프로젝트 루트로 복사하여 파일명을 praw.ini 로 변경하세요.
+# 2) 값들을 자신의 Reddit 앱/계정 정보로 교체하세요.
+# 3) praw.ini 는 .gitignore 에 추가되어 있어 저장소에 커밋되지 않습니다.
+

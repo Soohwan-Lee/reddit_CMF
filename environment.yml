@@ -1,0 +1,19 @@
+name: reddit-cmf
+channels: [conda-forge, defaults]
+dependencies:
+  - python=3.10
+  - pandas
+  - pyarrow
+  - tqdm
+  - scikit-learn
+  - umap-learn
+  - plotly
+  - pip
+  - pip:
+      - praw
+      - requests
+      - orjson
+      - sentence-transformers
+      - anthropic
+      - openai
+

@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# Secrets & Configs
+.env
+praw.ini
+configs/praw.ini
+
+# Data & Artifacts
+data/**
+!data/.gitkeep
+models/**
+!models/.gitkeep
+figures/**
+!figures/.gitkeep
+
+# Taskmaster
+.taskmaster/
+
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+dev-debug.log
+# Dependency directories
+node_modules/
+# Environment variables
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+# OS specific
+
+# Task files
+# tasks.json
+# tasks/ 

@@ -1,0 +1,49 @@
+project:
+  name: reddit-cmf
+
+data:
+  subreddit: IndustrialDesign
+  time_window:
+    start: "2023-11-01"
+    end: "2025-11-01"
+  modes: [top]  # 추가 수집 시 [top, hot, best]
+  top_limit: 5000
+  top_time_filter: all  # 기본 top 수집 시간 범위
+  top_time_filters: [all, year, month, week]  # 병렬로 수집할 범위 목록
+  min_text_len: 20
+  raw_path: "data/raw/r_industrialdesign_top.parquet"
+  processed_path: "data/processed/posts_clean.parquet"
+  clustered_path: "data/processed/posts_with_clusters.parquet"
+  labeled_path: "data/processed/posts_labeled.parquet"
+
+search:
+  by_timestamp: false        # timestamp 검색 사용 여부
+  bucket: month              # month | quarter (by_timestamp=True 일 때만 사용)
+  search_limit: 1000         # 버킷별 최대 수집 개수(상한)
+
+embedding:
+  model_name: "Qwen/Qwen3-Embedding-0.6B"
+  batch_size: 32
+  normalize: true
+  output_npz: "models/embeddings_qwen3.npz"
+
+umap:
+  n_neighbors: 15
+  min_dist: 0.1
+  n_components: 2
+  random_state: 42
+
+kmeans:
+  k_min: 3
+  k_max: 20
+  random_state: 42
+
+llm:
+  sample_per_cluster: 30
+  model_primary: "claude-3-5-sonnet"
+  model_crosscheck: "gpt-5"
+  model_openai: "gpt-5"
+
+analysis:
+  figures_dir: "figures"
+
