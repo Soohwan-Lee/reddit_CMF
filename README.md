@@ -197,6 +197,7 @@ python -m src.analyze        --config configs/config.yaml
 
 ```
 .
+├── assets/fonts/             # IBM Plex Sans (SIL OFL 1.1), used by the figures
 ├── configs/
 │   ├── config.yaml           # subreddit, time window, paths, model and clustering parameters
 │   └── praw.ini.example      # template for Reddit API credentials
