@@ -371,6 +371,56 @@ def plot_flair_mix(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path, top_n: in
     save(fig, fig_dir, "flair_mix")
 
 
+def cluster_diagnostics(cfg: Dict, k_chosen: int, n_seeds: int = 5) -> Dict:
+    """Refit KMeans over the configured K range to check how clear the structure is.
+
+    Returns inertia and cosine silhouette per K, and the adjusted Rand index
+    between the chosen-K solution under the configured seed and other seeds.
+    """
+    from sklearn.cluster import KMeans
+    from sklearn.metrics import adjusted_rand_score, silhouette_score
+
+    emb = np.load(cfg["embedding"]["output_npz"], allow_pickle=True)["embeddings"]
+    k_min, k_max = int(cfg["kmeans"]["k_min"]), int(cfg["kmeans"]["k_max"])
+    seed = int(cfg["kmeans"]["random_state"])
+    ks = list(range(k_min, k_max + 1))
+    inertia, silhouette = [], []
+    for k in ks:
+        km = KMeans(n_clusters=k, n_init="auto", random_state=seed).fit(emb)
+        inertia.append(float(km.inertia_))
+        silhouette.append(float(silhouette_score(emb, km.labels_, metric="cosine")))
+    runs = [KMeans(n_clusters=k_chosen, n_init="auto", random_state=seed + i).fit_predict(emb)
+            for i in range(n_seeds)]
+    ari = [float(adjusted_rand_score(runs[0], r)) for r in runs[1:]]
+    return {"k": ks, "inertia": inertia, "silhouette": silhouette, "seed_ari": ari}
+
+
+def plot_k_diagnostics(diag: Dict, k_chosen: int, fig_dir: Path) -> None:
+    ks = np.array(diag["k"])
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4.4))
+    for ax, key, label in zip(axes, ["inertia", "silhouette"],
+                              ["KMeans inertia (within-cluster sum of squares)", "Silhouette score (cosine)"]):
+        v = np.array(diag[key])
+        ax.plot(ks, v, color=ACCENT, lw=2, marker="o", ms=4, zorder=2)
+        i = int(np.where(ks == k_chosen)[0][0])
+        ax.scatter([k_chosen], [v[i]], s=90, facecolors="none", edgecolors=INK, linewidths=1.5, zorder=3)
+        ax.annotate(f"K = {k_chosen}", (k_chosen, v[i]), xytext=(8, 10), textcoords="offset points",
+                    fontsize=10, color=INK)
+        ax.set_xticks(ks[::2])
+        ax.yaxis.grid(True, zorder=0)
+        ax.set_xlabel("Number of clusters K")
+        ax.set_title(label)
+    axes[1].set_ylim(0, max(0.1, max(diag["silhouette"]) * 1.4))
+    ari = diag["seed_ari"]
+    fig.text(0.012, 0.015,
+             f"No sharp elbow, and silhouette stays near {np.mean(diag['silhouette']):.2f} for every K "
+             f"(0 = no separation, 1 = perfect). Re-running K = {k_chosen} with {len(ari)} other seeds "
+             f"agrees with the reference run at ARI {min(ari):.2f}-{max(ari):.2f}.",
+             fontsize=9.5, color=MUTED)
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    save(fig, fig_dir, "k_selection")
+
+
 def build_figures(cfg: Dict) -> None:
     setup_style()
     fig_dir = Path(cfg["analysis"]["figures_dir"])
@@ -396,6 +446,11 @@ def build_figures(cfg: Dict) -> None:
     plot_engagement(df, tbl, fig_dir)
     plot_terms(terms, tbl, fig_dir)
     plot_flair_mix(df, tbl, fig_dir)
+
+    diag = cluster_diagnostics(cfg, k_chosen=len(tbl))
+    plot_k_diagnostics(diag, len(tbl), fig_dir)
+    logger.info("Silhouette by K: %s", dict(zip(diag["k"], np.round(diag["silhouette"], 3))))
+    logger.info("Seed ARI at K=%d: %s", len(tbl), np.round(diag["seed_ari"], 2))
 
     # Aggregate table for the README (gitignored; no post-level data).
     out = tbl.assign(top_terms=[", ".join(t for t, _ in terms.get(c, [])) for c in tbl.index])
