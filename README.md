@@ -10,13 +10,19 @@
 
 ![Overview: UMAP map of 431 r/IndustrialDesign posts in 8 labelled clusters](figures/hero.png)
 
+**Main findings**
+
+- Roughly 7 in 10 top posts fall in clusters about showing work: things people built, crafted, sketched, or rendered, usually posted to get feedback.
+- The rest ask about the profession: careers, school, the job market, and which software to learn.
+- The groups overlap a lot. Software, sketching, craft, and career posts form clear regions on the map; the other boundaries are loose (see [How firm are the clusters?](#how-firm-are-the-clusters)).
+
 ## Motivation
 
-Online communities are where many designers learn, ask for critique, show work, and talk about their careers. This small project looks at the discourse of one of them, the [r/IndustrialDesign](https://www.reddit.com/r/IndustrialDesign/) subreddit, and asks a simple descriptive question:
+Designers use online communities to show work, get critique, and ask about their careers. This project looks at one of them, [r/IndustrialDesign](https://www.reddit.com/r/IndustrialDesign/), with one descriptive question:
 
 > **What do industrial designers talk about when they talk to each other online?**
 
-It is an exploratory, computational first pass: collect highly-ranked posts, embed them with a sentence-embedding model, cluster the embeddings, and use an LLM to propose a readable name for each cluster. The method follows the exploratory stage of Pataranutaporn et al.'s computational analysis of r/MyBoyfriendIsAI ([arXiv:2509.11391](https://arxiv.org/abs/2509.11391)), applied to a design community (see [Method](#method-adapted-from-pataranutaporn-et-al-2025)). The output is a map of themes, not a validated taxonomy (see [Limitations](#limitations)).
+It is a quick computational pass. I collected highly ranked posts, turned each one into a vector with a sentence-embedding model, grouped similar vectors, and asked an LLM to name each group. The method follows the first stage of Pataranutaporn et al.'s analysis of r/MyBoyfriendIsAI ([arXiv:2509.11391](https://arxiv.org/abs/2509.11391)); the [Method](#method-adapted-from-pataranutaporn-et-al-2025) section compares the two. The result is a rough map of topics, not a validated taxonomy (see [Limitations](#limitations)).
 
 ## Dataset
 
@@ -31,7 +37,7 @@ It is an exploratory, computational first pass: collect highly-ranked posts, emb
 | Post format | 28% text posts, 72% link / image / gallery posts (titles still carry text) |
 | Clusters | **8** (KMeans, K chosen by an elbow heuristic over K = 3 to 20) |
 
-The sample is heavily skewed toward recent posts: **186 posts (43%) were created in October 2025**, the last month of the window. This is a side effect of the sampling strategy (the `month` and `week` top listings return recent posts), not evidence that the community suddenly grew.
+The sample leans heavily toward recent posts: 186 posts (43%) are from October 2025, the last month of the window. That comes from how the posts were collected (the `month` and `week` top listings only return recent posts). It says nothing about the community growing.
 
 ![Monthly volume of collected posts](figures/monthly_volume.png)
 
@@ -58,11 +64,11 @@ flowchart LR
 | Label | `src/llm_label.py` | `data/processed/cluster_summaries.json` (OpenAI Responses API, Anthropic fallback) |
 | Analyse | `src/analyze.py` | `figures/*.png`, `figures/*.svg` |
 
-KMeans runs on the 1024-dimensional embeddings; UMAP (cosine, 15 neighbours, `min_dist` 0.1) is used only to draw the map.
+KMeans groups the posts using the full 1024-dimensional embeddings. UMAP (cosine, 15 neighbours, `min_dist` 0.1) squeezes the same embeddings into two dimensions only to draw the map: posts that sit close on the map tend to say similar things, but distances across the map are not exact.
 
 ## Method: adapted from Pataranutaporn et al. (2025)
 
-The pipeline reuses the exploratory stage of ["My Boyfriend is AI": A Computational Analysis of Human-AI Companionship in Reddit's AI Community](https://arxiv.org/abs/2509.11391) (Pataranutaporn, Karny, Archiwaranguprok, Albrecht, Liu & Maes, 2025), which mapped the themes of r/MyBoyfriendIsAI and then coded posts with LLM classifiers. This project kept the first half and added non-LLM cross-checks in place of the second.
+The pipeline reuses the exploratory stage of ["My Boyfriend is AI": A Computational Analysis of Human-AI Companionship in Reddit's AI Community](https://arxiv.org/abs/2509.11391) (Pataranutaporn, Karny, Archiwaranguprok, Albrecht, Liu & Maes, 2025), which mapped the themes of r/MyBoyfriendIsAI and then coded every post with LLM classifiers. This project repeats the theme-mapping part and skips the post coding. Instead it adds a few checks that do not rely on an LLM.
 
 | Step | Reference study (r/MyBoyfriendIsAI) | This project (r/IndustrialDesign) |
 |---|---|---|
@@ -77,79 +83,79 @@ The pipeline reuses the exploratory stage of ["My Boyfriend is AI": A Computatio
 | Post-level coding | 19 LLM classifiers (post type, tone, platforms, relationship dynamics, ...) | Planned, not implemented |
 | Added here | | Engagement by cluster, sampling-bias check by month, cluster robustness check (silhouette, seed stability) |
 
-In short, the two projects share the clustering and labelling recipe; this one stops at the theme map and adds checks that do not depend on an LLM.
-
 ## Results
 
 ### The eight clusters
 
-Titles, descriptions, and keywords were generated by an LLM from the 30 highest-scoring posts of each cluster; the one-line descriptions below are condensed from those summaries. The last column lists the cluster's most distinctive words, computed independently from all posts with class-based TF-IDF (see below).
+An LLM wrote each cluster's title and summary from its 30 highest-scoring posts; the descriptions below are shortened from those summaries. The last column is computed without an LLM: the words most typical of each cluster compared with the others (see [below](#what-distinguishes-each-cluster)).
 
-| | Cluster (LLM title) | Posts | Share | What it is about (condensed from the LLM summary) | LLM keywords | Distinctive terms (c-TF-IDF) |
-|---|---|---:|---:|---|---|---|
-| C7 | Industrial Design Innovations and Reflections | 87 | 20.2% | Reflections on design past and present, including nostalgia for early-2000s products, alongside personal projects | creativity, innovation, nostalgia, aesthetics | project, product, love, feedback, survey |
-| C1 | 3D Design and Fabrication | 86 | 20.0% | Built projects made with 3D printing, CNC, and other processes (furniture, lamps, desk objects), shared for feedback | 3D printing, CNC machining, fabrication, prototype | lamp, model, project, designed, furniture |
-| C3 | Industrial Design Perspectives | 68 | 15.8% | Personal questions about careers, education paths, job seeking, and the future of the field, including AI | career, education, AI and technology, job market | job, career, engineering, product, degree |
-| C5 | Creative Design and Craftsmanship | 55 | 12.8% | Crafted and concept objects (leather goods, watches, modular displays) mixing handcraft and digital modelling | craftsmanship, leatherwork, 3D modeling, custom creations | usb, leather, power, pen, thought |
-| C4 | Design and Job Challenges | 47 | 10.9% | Project feedback requests mixed with frustration about job and internship expectations | design projects, job market, internships, feedback | solutions, feedback, vehicle, follow, books |
-| C6 | Industrial Design Sketching | 36 | 8.4% | Sharing and critiquing product sketches: proportion, shading, perspective, and AI-assisted rendering tools | sketching, proportion, shading, Vizcom.ai | sketches, sketch, sketching, battery, vizcom |
-| C0 | 3D Rendering and Design Software Discussion | 31 | 7.2% | Choosing and combining CAD and rendering software, plus hardware advice | 3D rendering, Blender, SolidWorks, CAD | blender, cad, software, rhino, rendering |
-| C2 | Challenges in Industrial Design Careers | 21 | 4.9% | Student and early-career questions on portfolios, internships, money, and the job market | career challenges, portfolio, internships, networking | questions, student, business, thread, internships |
+| | Cluster (LLM title) | Posts | Share | What it is about | Typical words |
+|---|---|---:|---:|---|---|
+| C7 | Industrial Design Innovations and Reflections | 87 | 20.2% | Thoughts on design past and present, including nostalgia for early-2000s products, plus personal projects | project, product, love, feedback, survey |
+| C1 | 3D Design and Fabrication | 86 | 20.0% | Furniture, lamps, and desk objects made with 3D printing, CNC, and other processes, posted for feedback | lamp, model, project, designed, furniture |
+| C3 | Industrial Design Perspectives | 68 | 15.8% | Questions about careers, education, job hunting, and where the field is going, including AI | job, career, engineering, product, degree |
+| C5 | Creative Design and Craftsmanship | 55 | 12.8% | Crafted and concept objects such as leather goods, watches, and modular displays | usb, leather, power, pen, thought |
+| C4 | Design and Job Challenges | 47 | 10.9% | Requests for project feedback, mixed with frustration about job and internship requirements | solutions, feedback, vehicle, follow, books |
+| C6 | Industrial Design Sketching | 36 | 8.4% | Product sketches and critique: proportion, shading, perspective, and AI rendering tools like Vizcom | sketches, sketch, sketching, battery, vizcom |
+| C0 | 3D Rendering and Design Software Discussion | 31 | 7.2% | Which CAD and rendering software to use and how to combine them, plus hardware advice | blender, cad, software, rhino, rendering |
+| C2 | Challenges in Industrial Design Careers | 21 | 4.9% | Student and early-career questions about portfolios, internships, money, and the job market | questions, student, business, thread, internships |
 
 ![Cluster sizes](figures/cluster_sizes.png)
 
 ### Where the clusters sit
 
-Each panel highlights one cluster on the shared UMAP map. Software (C0), sketching (C6), craft objects (C5), and career / perspective posts (C3) form compact regions; the two largest clusters (C7, C1) and the two smaller career-related clusters (C4, C2) are spread more widely, which suggests their boundaries are softer.
+Each panel shows the same map with one cluster coloured in. Software (C0), sketching (C6), craft objects (C5), and career questions (C3) each sit in one tight region. The two largest clusters (C7, C1) and the two smaller career-related ones (C4, C2) are spread across the map, so their edges are less clear.
 
 ![UMAP small multiples, one panel per cluster](figures/umap_clusters.png)
 
 ### What distinguishes each cluster
 
-To cross-check the LLM labels with something that does not depend on an LLM, `src/analyze.py` computes class-based TF-IDF (one document per cluster, as in BERTopic) over post titles and bodies. Generic community words (*design*, *industrial*, ...) are removed, and a term must be used by at least three different authors so that one poster's brand or project name cannot surface as a theme. The terms agree well with the LLM titles for software (*blender, cad, rhino*), sketching (*sketch, vizcom*), fabrication (*lamp, furniture, printed, chair*), and careers (*job, career, degree*); they are much less specific for C7 and C4, whose LLM titles are correspondingly vague.
+To check the LLM's titles without an LLM, `src/analyze.py` finds the words that appear much more often in one cluster than in the rest (class-based TF-IDF, the method BERTopic uses). Words that appear everywhere in this community (*design*, *industrial*, ...) are removed, and a word has to be used by at least three different people, so one person's brand or project name cannot show up as a topic.
+
+The words match the LLM titles well for software (*blender, cad, rhino*), sketching (*sketch, vizcom*), fabrication (*lamp, furniture, printed, chair*), and careers (*job, career, degree*). For C7 and C4 the words are generic, and so are their titles.
 
 ![Distinctive terms per cluster](figures/distinctive_terms.png)
 
 ### Post flair as a second cross-check
 
-Reddit post flair is chosen by the author and was **not** used for clustering, so it offers an independent view. Show-and-tell clusters lean on the *Creative* and *Project* flairs (C5: 51% Creative; C6: 42% Creative), while C3 and C2 are dominated by *Discussion*, *Career*, and *School*.
+Authors pick a flair (a tag such as *Creative* or *Career*) when they post. Flair was not used for clustering, so it gives a second check that does not depend on the LLM. Clusters that show work mostly carry *Creative* and *Project* flairs (C5: 51% Creative, C6: 42% Creative). C3 and C2 mostly carry *Discussion*, *Career*, and *School*.
 
 ![Flair mix within each cluster](figures/flair_mix.png)
 
 ### Engagement
 
-Median score and comment counts per cluster. Visual show-and-tell clusters (C4, C6, C5, C1, C7) have median scores of 72 to 111, while the question-style clusters C0, C2, and C3 have median scores of 5 to 6.
+Clusters that show work (C4, C6, C5, C1, C7) have median scores of 72 to 111. The question clusters C0, C2, and C3 have median scores of 5 to 6.
 
-This gap should **not** be read as "the community does not care about careers or software". Posts in C0, C2, and C3 are mostly text posts (63% vs 14% in the other clusters) and mostly from the final month (68% vs 34%), and posts from October 2025 have a median score of 2 versus 122 for older posts in the sample. Recency and post format, both artefacts of how the sample was drawn, explain much of the difference.
+That gap does not mean the community ignores careers or software. Posts in C0, C2, and C3 are mostly text posts (63%, against 14% in the other clusters) and mostly from the final month (68% against 34%). Posts from October 2025 have a median score of 2, against 122 for older posts, because they had less time to collect votes. Post format and recency, both side effects of how the sample was collected, explain much of the difference.
 
 ![Engagement per cluster](figures/engagement.png)
 
 ### How firm are the clusters?
 
-`src/analyze.py` refits KMeans over the same K range to check how much structure there is to find. The answer is: not much.
+`src/analyze.py` reruns KMeans over the same range of K to see how clearly the posts split into groups. They do not split cleanly.
 
-- **No clear elbow.** Inertia falls almost linearly from K = 3 to 20. K = 8 has the largest bend, but only slightly.
-- **Weak separation.** The cosine silhouette score is about 0.06 at every K (0 means no separation, 1 means perfect).
-- **Moderate stability.** Re-running K = 8 with four other random seeds agrees with the reference run at an adjusted Rand index of 0.36 to 0.45, so many posts change cluster from run to run.
+- **No clear elbow.** Inertia (how far posts sit from their cluster centre) falls almost in a straight line from K = 3 to 20. K = 8 has the biggest bend, but only by a little.
+- **Weak separation.** The silhouette score, which measures how much closer a post is to its own cluster than to the next one, is about 0.06 at every K (0 means no separation, 1 means perfect).
+- **Moderate stability.** Running K = 8 again with four other random seeds gives an adjusted Rand index of 0.36 to 0.45 against the original run (1 would be identical), so many posts land in a different cluster each time.
 
 ![Inertia and silhouette by K](figures/k_selection.png)
 
-The posts form a continuum rather than separate groups. The compact regions on the map (software, sketching, craft, careers) are consistent with the term and flair cross-checks and are the most trustworthy themes; the exact boundaries, the number eight, and the softer clusters (C7, C4, C2) should be read loosely.
+So the posts form a continuum more than separate groups. The tight regions on the map (software, sketching, craft, careers) also show up in the word and flair checks, which makes them the most reliable topics. Treat the exact boundaries, the number eight, and the looser clusters (C7, C4, C2) as approximate.
 
 ### Summary
 
-Within this sample, the subreddit's highly-ranked content splits roughly into two kinds of discourse:
+In this sample, the subreddit's top posts fall into two broad kinds:
 
-- **Showing work** (C1, C5, C6, and much of C7 and C4; about 72% of posts): fabricated objects, crafted products, sketches, and concept projects, usually shared for feedback.
-- **Asking about the profession** (C3, C2, C0; about 28% of posts): careers, education, the job market, and which software to learn.
+- **Showing work** (C1, C5, C6, and most of C7 and C4; about 72% of posts): built objects, crafted products, sketches, and concept projects, usually posted for feedback.
+- **Asking about the profession** (C3, C2, C0; about 28% of posts): careers, school, the job market, and which software to learn.
 
-These are descriptive patterns in a small, recency-skewed sample of top posts, not population estimates for the community.
+These numbers describe a small sample of top posts that leans toward recent ones. They are not estimates for the whole community.
 
 ## Limitations
 
 - **Sampling bias.** Only *top* listings were collected, so the sample over-represents popular and recent posts (43% from the final month) and omits most ordinary posts and all comments. 431 posts is small.
 - **Weak cluster structure.** KMeans assumes roughly spherical clusters of similar size, and K = 8 came from a second-difference elbow on an almost linear inertia curve. Silhouette is about 0.06 and seed-to-seed agreement is ARI 0.36 to 0.45 (see [How firm are the clusters?](#how-firm-are-the-clusters)). Sub-clustering, as in the reference study, or a density-based method such as HDBSCAN was not tried.
-- **LLM labels are not human-validated.** Titles and descriptions were written by an LLM from the 30 top-scoring posts of each cluster. Some are vague or overlap (C3 vs C2, C4 vs C7). The c-TF-IDF terms and flair mix are offered as cross-checks, not as validation; no human coding or inter-rater agreement was done.
+- **LLM labels are not human-validated.** Titles and descriptions were written by an LLM from the 30 top-scoring posts of each cluster. Some are vague or overlap (C3 vs C2, C4 vs C7). The word and flair checks support the labels but do not validate them; no human coding or inter-rater agreement was done.
 - **Quantitative post labelling was not implemented.** An earlier plan to classify every post by content type, emotion, purpose, and tools was never implemented; its placeholder module has been removed and no such results are reported.
 - **Text only.** Most posts are image or gallery posts; only their titles (and any body text) were embedded. Visual content was not analysed.
 - **Engagement is a snapshot.** Scores and comment counts were recorded once at collection time and are not comparable between old and very recent posts.
