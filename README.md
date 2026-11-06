@@ -1,10 +1,12 @@
 # What Do Industrial Designers Talk About on Reddit?
 
-**Embedding-based topic mapping of r/IndustrialDesign: 431 top posts, 8 clusters, LLM-written cluster summaries.**
+**Embedding-based topic mapping of [r/IndustrialDesign](https://www.reddit.com/r/IndustrialDesign/): 431 top posts, 8 clusters, LLM-written cluster summaries.**
 
+[![Subreddit: r/IndustrialDesign](https://img.shields.io/badge/subreddit-r%2FIndustrialDesign-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/IndustrialDesign/)
+[![Method: arXiv 2509.11391](https://img.shields.io/badge/method-arXiv%202509.11391-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2509.11391)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
 ![Embeddings](https://img.shields.io/badge/embeddings-Qwen3--Embedding--0.6B-6250d6)
-![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)
+[![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
 
 ![Overview: UMAP map of 431 r/IndustrialDesign posts in 8 labelled clusters](figures/hero.png)
 
