@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import argparse
+from pathlib import Path
 from typing import Dict, Tuple
 
 import numpy as np
 import pandas as pd
 import plotly.express as px
 from sklearn.cluster import KMeans
-from sklearn.metrics import pairwise_distances_argmin_min
 import umap  # type: ignore
 
 from .utils import get_logger, read_yaml, load_parquet, save_parquet
@@ -23,10 +23,9 @@ def parse_args() -> argparse.Namespace:
 
 
 def choose_k_by_elbow(inertias: np.ndarray, k_values: np.ndarray) -> int:
-    # 2차 미분 근사로 굴곡점 찾기
+    """Pick K from the inertia curve using a discrete second difference."""
     second_diff = np.diff(inertias, n=2)
-    # 최소값(곡률 큰 지점) 인덱스 선택
-    idx = np.argmin(second_diff) + 2  # 2차 미분은 길이가 n-2
+    idx = np.argmin(second_diff) + 2  # second_diff has length n - 2
     return int(k_values[idx])
 
 
@@ -81,16 +80,13 @@ def cluster(cfg: Dict) -> Tuple[pd.DataFrame, np.ndarray]:
         hover_data=["title", "score", "num_comments"],
         title="UMAP clusters",
     )
-    fig.write_html("figures/umap_clusters.html")
-    logger.info("Saved UMAP plot to figures/umap_clusters.html")
-
-    try:
-        fig.write_image("figures/umap_clusters.png", scale=2)
-        logger.info("Saved UMAP plot to figures/umap_clusters.png")
-    except ValueError as exc:
-        logger.warning(
-            "PNG export skipped: %s (install 'kaleido' for static image export)", exc
-        )
+    fig_dir = Path(cfg["analysis"]["figures_dir"])
+    fig_dir.mkdir(parents=True, exist_ok=True)
+    html_path = fig_dir / "umap_clusters.html"
+    fig.write_html(html_path)
+    # Local exploration only: hover text includes post titles, so this file is
+    # gitignored. Static, aggregate figures are produced by src.analyze.
+    logger.info("Saved interactive UMAP plot to %s", html_path)
 
     return df, umap_2d
 

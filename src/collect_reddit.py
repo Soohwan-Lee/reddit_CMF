@@ -31,7 +31,7 @@ def iter_time_buckets(start_dt: datetime, end_dt: datetime, bucket: str = "month
     cur = start_dt
     while cur < end_dt:
         if bucket == "quarter":
-            # 다음 분기의 시작 계산
+            # Compute the end of the current quarter
             month = ((cur.month - 1) // 3) * 3 + 1
             q_start = datetime(cur.year, month, 1, tzinfo=timezone.utc)
             if month in (1, 4, 7, 10):
@@ -67,7 +67,7 @@ def fetch_posts(cfg: Dict, mode: str, limit: int | None) -> pd.DataFrame:
 
     submissions = []
     if mode == "top":
-        # 1) 타임스탬프 검색 기반(선택)
+        # 1) Optional: timestamp-bucketed search
         if bool(cfg.get("search", {}).get("by_timestamp", False)):
             bucket = str(cfg.get("search", {}).get("bucket", "month"))
             per_bucket_limit = int(cfg.get("search", {}).get("search_limit", 1000))
@@ -76,7 +76,7 @@ def fetch_posts(cfg: Dict, mode: str, limit: int | None) -> pd.DataFrame:
             end_dt = datetime.fromtimestamp(end_unix, tz=timezone.utc)
             for s_unix, e_unix in iter_time_buckets(start_dt, end_dt, bucket=bucket):
                 query = f"timestamp:{s_unix}..{e_unix}"
-                # Reddit 공식 /search API: q, sort, syntax 파라미터 사용
+                # Official Reddit /search API with q, sort, and syntax params
                 # ref: https://www.reddit.com/dev/api/ (search)
                 for s in sr.search(
                     query=query,
@@ -88,7 +88,7 @@ def fetch_posts(cfg: Dict, mode: str, limit: int | None) -> pd.DataFrame:
                 ):
                     submissions.append(s)
         else:
-            # 2) 기본 top 리스팅 - 다양한 time_filter 조합으로 커버리지 확장
+            # 2) Default: union of top listings over several time_filter values
             filters = cfg["data"].get("top_time_filters") or [top_time_filter]
             for tf in filters:
                 for s in sr.top(time_filter=tf, limit=api_limit):

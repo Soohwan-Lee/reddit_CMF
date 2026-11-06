@@ -1,20 +1,17 @@
 from __future__ import annotations
 
-from typing import Optional
-
 import os
 import praw  # type: ignore
 
 
 def create_reddit_client(site_name: str = "DEFAULT") -> praw.Reddit:
-    """
-    PRAW는 기본적으로 현재 작업 디렉토리/사용자 홈의 praw.ini를 탐색합니다.
-    site_name 섹션(기본: DEFAULT)을 사용합니다.
+    """Create a PRAW client.
 
-    환경변수로 직접 제공하는 경우에도 동작하도록 백업 처리합니다.
-    (PRAW는 환경변수 PRAW_CLIENT_ID 등도 인식함)
+    Credentials come from ``PRAW_*`` environment variables when set, otherwise
+    from the ``site_name`` section of a ``praw.ini`` in the working directory
+    or user home.
     """
-    # 환경변수 기반 설정 우선
+    # Environment variables take precedence
     if os.getenv("PRAW_CLIENT_ID") and os.getenv("PRAW_CLIENT_SECRET"):
         return praw.Reddit(
             client_id=os.getenv("PRAW_CLIENT_ID"),
@@ -24,7 +21,7 @@ def create_reddit_client(site_name: str = "DEFAULT") -> praw.Reddit:
             password=os.getenv("PRAW_PASSWORD"),
         )
 
-    # praw.ini 기반 설정
+    # Fall back to praw.ini
     return praw.Reddit(site_name)
 
 

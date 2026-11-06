@@ -83,7 +83,8 @@ def parse_args() -> argparse.Namespace:
     return p.parse_args()
 
 
-def sample_representatives(df: pd.DataFrame, k: int, n: int) -> Dict[int, List[Dict]]:
+def sample_representatives(df: pd.DataFrame, n: int) -> Dict[int, List[Dict]]:
+    """Pick the n highest-scoring posts of each cluster as its representatives."""
     reps: Dict[int, List[Dict]] = {}
     for c in sorted(df["cluster"].dropna().unique()):
         g = df[df["cluster"] == c].sort_values(["score", "num_comments"], ascending=False).head(n)
@@ -94,12 +95,12 @@ def sample_representatives(df: pd.DataFrame, k: int, n: int) -> Dict[int, List[D
 def call_anthropic(cfg: Dict, content: str) -> Dict:
     api_key = os.getenv("ANTHROPIC_API_KEY")
     if not api_key:
-        logger.warning("ANTHROPIC_API_KEY 가 없어 Anthropic 호출을 건너뜁니다.")
+        logger.warning("ANTHROPIC_API_KEY not set; skipping Anthropic call.")
         return FALLBACK_VALUE
     try:
         import anthropic  # type: ignore
     except Exception:
-        logger.warning("anthropic 패키지가 없어 Anthropic 호출을 건너뜁니다.")
+        logger.warning("anthropic package not installed; skipping Anthropic call.")
         return FALLBACK_VALUE
 
     client = anthropic.Anthropic(api_key=api_key)
@@ -111,7 +112,7 @@ def call_anthropic(cfg: Dict, content: str) -> Dict:
         system=PROMPT_TEMPLATE,
         messages=[{"role": "user", "content": content}],
     )
-    # 단순 파서 (안전하게 시도)
+    # Best-effort JSON parsing of the text blocks
     text = "".join([b.text for b in msg.content if getattr(b, "type", "") == "text"])  # type: ignore
     parsed = _parse_summary_text(text)
     if parsed:
@@ -146,12 +147,12 @@ def _openai_call_once(client, model: str, content: str, include_temperature: boo
 def call_openai(cfg: Dict, content: str) -> Dict:
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        logger.warning("OPENAI_API_KEY 가 없어 OpenAI 호출을 건너뜁니다.")
+        logger.warning("OPENAI_API_KEY not set; skipping OpenAI call.")
         return FALLBACK_VALUE
     try:
         from openai import OpenAI  # type: ignore
     except Exception:
-        logger.warning("openai 패키지가 없어 OpenAI 호출을 건너뜁니다.")
+        logger.warning("openai package not installed; skipping OpenAI call.")
         return FALLBACK_VALUE
 
     client = OpenAI(api_key=api_key)
@@ -172,17 +173,17 @@ def call_openai(cfg: Dict, content: str) -> Dict:
                 last_error = exc
                 msg = str(exc)
                 if "Unsupported parameter" in msg and "temperature" in msg and include_temp:
-                    continue  # temperature 제거 재시도는 다음 루프에서 처리
+                    continue  # retry without temperature
                 if "unsupported model" in msg.lower() or "model_not_found" in msg.lower():
-                    break  # 다음 모델로 이동
+                    break  # move on to the next model
                 continue
 
-    logger.warning("OpenAI 호출 실패(최종): %s", last_error)
+    logger.warning("All OpenAI attempts failed: %s", last_error)
     return FALLBACK_VALUE
 
 
 def call_llm(cfg: Dict, content: str) -> Dict:
-    # OpenAI 우선, 실패 시 Anthropic 시도
+    # Try OpenAI first, fall back to Anthropic
     result = call_openai(cfg, content)
     if result["title"] != "(skipped)" or result["description"] != "(skipped)":
         return result
@@ -190,16 +191,17 @@ def call_llm(cfg: Dict, content: str) -> Dict:
 
 
 def sensemaking(cfg: Dict) -> None:
-    df = load_parquet(cfg["data"]["clustered_path"])  # cluster 라벨 포함
+    df = load_parquet(cfg["data"]["clustered_path"])  # includes cluster labels
     sample_n = int(cfg["llm"]["sample_per_cluster"])
-    reps = sample_representatives(df, int(df["cluster"].max()), sample_n)
+    reps = sample_representatives(df, sample_n)
 
     results = {}
     for c, posts in reps.items():
         content = "\n\n".join([f"TITLE: {p['title']}\nBODY: {p['selftext']}" for p in posts])
         results[str(c)] = call_llm(cfg, content)
-    save_json(results, "data/processed/cluster_summaries.json")
-    logger.info("Saved cluster_summaries.json with %d clusters", len(results))
+    out = cfg["data"]["summaries_path"]
+    save_json(results, out)
+    logger.info("Saved %s with %d clusters", out, len(results))
 
 
 def main() -> None:

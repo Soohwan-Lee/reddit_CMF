@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-import json
+import hashlib
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, Iterable, Optional
+from typing import Any, Dict, Optional
 
 import orjson
 import pandas as pd
@@ -49,14 +49,23 @@ def save_json(obj: Any, path: str | Path) -> None:
 
 
 def read_yaml(path: str | Path) -> Dict[str, Any]:
-    import yaml  # PyYAML 는 conda 기본 채널 포함
+    import yaml
+
     with open(path, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
 
 
 def anonymize_author(author: Optional[str]) -> str:
+    """Map a username to a stable pseudonym such as ``u/[anon-1a2b3c4d]``.
+
+    Uses a SHA-256 digest, which is stable across runs (unlike the salted
+    built-in ``hash``). Set ``ANON_SALT`` so pseudonyms cannot be reversed by
+    hashing a list of known usernames.
+    """
     if not author or author in {"[deleted]", "[removed]"}:
         return "u/[anon]"
-    return f"u/[anon-{abs(hash(author)) % 10_000}]"
+    salt = os.getenv("ANON_SALT", "")
+    digest = hashlib.sha256(f"{salt}{author}".encode("utf-8")).hexdigest()[:8]
+    return f"u/[anon-{digest}]"
 
 

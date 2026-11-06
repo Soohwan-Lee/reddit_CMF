@@ -6,20 +6,20 @@ data:
   time_window:
     start: "2023-11-01"
     end: "2025-11-01"
-  modes: [top]  # 추가 수집 시 [top, hot, best]
+  modes: [top]  # other supported modes: hot, best
   top_limit: 5000
-  top_time_filter: all  # 기본 top 수집 시간 범위
-  top_time_filters: [all, year, month, week]  # 병렬로 수집할 범위 목록
+  top_time_filter: all  # fallback when top_time_filters is empty
+  top_time_filters: [all, year, month, week]  # top listings unioned during collection
   min_text_len: 20
   raw_path: "data/raw/r_industrialdesign_top.parquet"
   processed_path: "data/processed/posts_clean.parquet"
   clustered_path: "data/processed/posts_with_clusters.parquet"
-  labeled_path: "data/processed/posts_labeled.parquet"
+  summaries_path: "data/processed/cluster_summaries.json"
 
 search:
-  by_timestamp: false        # timestamp 검색 사용 여부
-  bucket: month              # month | quarter (by_timestamp=True 일 때만 사용)
-  search_limit: 1000         # 버킷별 최대 수집 개수(상한)
+  by_timestamp: false        # use timestamp-bucketed search instead of top listings
+  bucket: month              # month | quarter (only when by_timestamp is true)
+  search_limit: 1000         # max posts per bucket
 
 embedding:
   model_name: "Qwen/Qwen3-Embedding-0.6B"
@@ -46,4 +46,5 @@ llm:
 
 analysis:
   figures_dir: "figures"
+  top_terms: 8               # distinctive terms per cluster (c-TF-IDF)
 
