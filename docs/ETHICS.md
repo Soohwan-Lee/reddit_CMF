@@ -1,9 +1,10 @@
 # Ethics and Data Usage Guidelines
 
-- Reddit 공개 데이터만 수집합니다.
-- 직접 식별 정보는 제외하고, 작성자명은 가명 처리(`u/[anon-xxxx]`).
-- 민감 이미지·댓글은 제외합니다.
-- 목적은 현상 이해와 디자인 실천 맥락화이며 비판이 아닙니다.
-- 인용 시 익명 처리 원칙을 준수합니다.
-- 데이터셋 공개 시 익명화 버전만 릴리스합니다.
+- Only publicly available Reddit data is collected.
+- Direct identifiers are excluded; author names are pseudonymised (`u/[anon-xxxxxxxx]`, a stable SHA-256 hash, optionally salted via `ANON_SALT`).
+- Sensitive images and comments are excluded.
+- The goal is to understand the phenomenon and contextualise design practice, not to criticise the community or individuals.
+- When quoting, anonymisation rules are followed.
+- If the dataset is ever released, only an anonymised version is published.
 
+In this repository, raw and processed data, embeddings, and the interactive HTML plot (which shows post titles) are gitignored. Only aggregate figures are committed, and the README reports cluster-level themes and statistics rather than individual posts.
