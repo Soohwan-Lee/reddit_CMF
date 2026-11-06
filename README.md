@@ -5,7 +5,7 @@
 [![Subreddit: r/IndustrialDesign](https://img.shields.io/badge/subreddit-r%2FIndustrialDesign-FF4500?logo=reddit&logoColor=white)](https://www.reddit.com/r/IndustrialDesign/)
 [![Method: arXiv 2509.11391](https://img.shields.io/badge/method-arXiv%202509.11391-B31B1B?logo=arxiv&logoColor=white)](https://arxiv.org/abs/2509.11391)
 ![Python](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)
-![Embeddings](https://img.shields.io/badge/embeddings-Qwen3--Embedding--0.6B-6250d6)
+[![Embeddings: Qwen3-Embedding-0.6B on Hugging Face](https://img.shields.io/badge/embeddings-Qwen3--Embedding--0.6B-FFD21E?logo=huggingface&logoColor=black)](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B)
 [![License: MIT](https://img.shields.io/badge/license-MIT-2a78d6)](LICENSE)
 
 ![Overview: UMAP map of 431 r/IndustrialDesign posts in 8 labelled clusters](figures/hero.png)
@@ -74,7 +74,7 @@ The pipeline reuses the exploratory stage of ["My Boyfriend is AI": A Computatio
 |---|---|---|
 | Data | 1,506 top-ranked posts, Dec 2024 to Aug 2025 | 431 top-ranked posts, Dec 2023 to Oct 2025 |
 | Text | Title + body | Title + body, posts under 20 characters dropped, authors pseudonymised |
-| Embedding | Qwen3-Embedding-0.6B | Qwen3-Embedding-0.6B (same model) |
+| Embedding | Qwen3-Embedding-0.6B | [Qwen3-Embedding-0.6B](https://huggingface.co/Qwen/Qwen3-Embedding-0.6B) (same model) |
 | Projection | UMAP to 2-D for visualisation | UMAP to 2-D for visualisation (cosine) |
 | Number of clusters | Elbow on WCSS over K = 3 to 20, second-derivative rule (K = 6) | Same rule and range (K = 8) |
 | Sub-clusters | Repeated the elbow within each cluster | Not done |
