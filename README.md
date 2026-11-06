@@ -14,7 +14,7 @@ Online communities are where many designers learn, ask for critique, show work, 
 
 > **What do industrial designers talk about when they talk to each other online?**
 
-It is an exploratory, computational first pass: collect highly-ranked posts, embed them with a sentence-embedding model, cluster the embeddings, and use an LLM to propose a readable name for each cluster. The output is a map of themes, not a validated taxonomy (see [Limitations](#limitations)).
+It is an exploratory, computational first pass: collect highly-ranked posts, embed them with a sentence-embedding model, cluster the embeddings, and use an LLM to propose a readable name for each cluster. The method follows the exploratory stage of Pataranutaporn et al.'s computational analysis of r/MyBoyfriendIsAI ([arXiv:2509.11391](https://arxiv.org/abs/2509.11391)), applied to a design community (see [Method](#method-adapted-from-pataranutaporn-et-al-2025)). The output is a map of themes, not a validated taxonomy (see [Limitations](#limitations)).
 
 ## Dataset
 
@@ -57,6 +57,25 @@ flowchart LR
 | Analyse | `src/analyze.py` | `figures/*.png`, `figures/*.svg` |
 
 KMeans runs on the 1024-dimensional embeddings; UMAP (cosine, 15 neighbours, `min_dist` 0.1) is used only to draw the map.
+
+## Method: adapted from Pataranutaporn et al. (2025)
+
+The pipeline reuses the exploratory stage of ["My Boyfriend is AI": A Computational Analysis of Human-AI Companionship in Reddit's AI Community](https://arxiv.org/abs/2509.11391) (Pataranutaporn, Karny, Archiwaranguprok, Albrecht, Liu & Maes, 2025), which mapped the themes of r/MyBoyfriendIsAI and then coded posts with LLM classifiers. This project kept the first half and added non-LLM cross-checks in place of the second.
+
+| Step | Reference study (r/MyBoyfriendIsAI) | This project (r/IndustrialDesign) |
+|---|---|---|
+| Data | 1,506 top-ranked posts, Dec 2024 to Aug 2025 | 431 top-ranked posts, Dec 2023 to Oct 2025 |
+| Text | Title + body | Title + body, posts under 20 characters dropped, authors pseudonymised |
+| Embedding | Qwen3-Embedding-0.6B | Qwen3-Embedding-0.6B (same model) |
+| Projection | UMAP to 2-D for visualisation | UMAP to 2-D for visualisation (cosine) |
+| Number of clusters | Elbow on WCSS over K = 3 to 20, second-derivative rule (K = 6) | Same rule and range (K = 8) |
+| Sub-clusters | Repeated the elbow within each cluster | Not done |
+| Cluster labels | Claude Sonnet 4 writes a title, summary, and key topics from representative posts | An LLM (OpenAI Responses API, Anthropic as fallback) writes a title, description, and 5 to 8 keywords from each cluster's 30 top-scoring posts |
+| Label check | Reviewed and verified by the researchers | Cross-checked against c-TF-IDF terms and author-chosen flair; no human review |
+| Post-level coding | 19 LLM classifiers (post type, tone, platforms, relationship dynamics, ...) | Planned, not implemented |
+| Added here | | Engagement by cluster, sampling-bias check by month, cluster robustness check (silhouette, seed stability) |
+
+In short, the two projects share the clustering and labelling recipe; this one stops at the theme map and adds checks that do not depend on an LLM.
 
 ## Results
 
@@ -103,6 +122,18 @@ This gap should **not** be read as "the community does not care about careers or
 
 ![Engagement per cluster](figures/engagement.png)
 
+### How firm are the clusters?
+
+`src/analyze.py` refits KMeans over the same K range to check how much structure there is to find. The answer is: not much.
+
+- **No clear elbow.** Inertia falls almost linearly from K = 3 to 20. K = 8 has the largest bend, but only slightly.
+- **Weak separation.** The cosine silhouette score is about 0.06 at every K (0 means no separation, 1 means perfect).
+- **Moderate stability.** Re-running K = 8 with four other random seeds agrees with the reference run at an adjusted Rand index of 0.36 to 0.45, so many posts change cluster from run to run.
+
+![Inertia and silhouette by K](figures/k_selection.png)
+
+The posts form a continuum rather than separate groups. The compact regions on the map (software, sketching, craft, careers) are consistent with the term and flair cross-checks and are the most trustworthy themes; the exact boundaries, the number eight, and the softer clusters (C7, C4, C2) should be read loosely.
+
 ### Summary
 
 Within this sample, the subreddit's highly-ranked content splits roughly into two kinds of discourse:
@@ -115,7 +146,7 @@ These are descriptive patterns in a small, recency-skewed sample of top posts, n
 ## Limitations
 
 - **Sampling bias.** Only *top* listings were collected, so the sample over-represents popular and recent posts (43% from the final month) and omits most ordinary posts and all comments. 431 posts is small.
-- **Clustering choices.** KMeans assumes roughly spherical clusters of similar size, and K = 8 came from a simple second-difference elbow heuristic on inertia over K = 3 to 20. Neither K nor the cluster boundaries were validated (for example with silhouette scores, stability across seeds, or a density-based alternative such as HDBSCAN).
+- **Weak cluster structure.** KMeans assumes roughly spherical clusters of similar size, and K = 8 came from a second-difference elbow on an almost linear inertia curve. Silhouette is about 0.06 and seed-to-seed agreement is ARI 0.36 to 0.45 (see [How firm are the clusters?](#how-firm-are-the-clusters)). Sub-clustering, as in the reference study, or a density-based method such as HDBSCAN was not tried.
 - **LLM labels are not human-validated.** Titles and descriptions were written by an LLM from the 30 top-scoring posts of each cluster. Some are vague or overlap (C3 vs C2, C4 vs C7). The c-TF-IDF terms and flair mix are offered as cross-checks, not as validation; no human coding or inter-rater agreement was done.
 - **Quantitative post labelling was not implemented.** An earlier plan to classify every post by content type, emotion, purpose, and tools was never implemented; its placeholder module has been removed and no such results are reported.
 - **Text only.** Most posts are image or gallery posts; only their titles (and any body text) were embedded. Visual content was not analysed.
@@ -178,7 +209,7 @@ python -m src.analyze        --config configs/config.yaml
 │   ├── embed.py              # sentence embeddings (Qwen3-Embedding-0.6B)
 │   ├── cluster.py            # KMeans with elbow K, UMAP projection, interactive plot
 │   ├── llm_label.py          # LLM cluster titles, descriptions, keywords
-│   ├── analyze.py            # static aggregate figures and c-TF-IDF terms
+│   ├── analyze.py            # aggregate figures, c-TF-IDF terms, cluster robustness check
 │   ├── check_auth.py         # verify Reddit credentials
 │   ├── reddit_client.py      # PRAW client factory
 │   └── utils.py              # logging, IO, config, pseudonymisation
@@ -190,6 +221,10 @@ python -m src.analyze        --config configs/config.yaml
 ## Ethics
 
 Only public posts were collected, author names were pseudonymised during pre-processing, and no raw data, usernames, post IDs, or post text are published in this repository. Figures and tables report cluster-level aggregates and paraphrased themes only. See [docs/ETHICS.md](docs/ETHICS.md).
+
+## Reference
+
+Pataranutaporn, P., Karny, S., Archiwaranguprok, C., Albrecht, C., Liu, A. R., & Maes, P. (2025). "My Boyfriend is AI": A Computational Analysis of Human-AI Companionship in Reddit's AI Community. arXiv:2509.11391. https://arxiv.org/abs/2509.11391
 
 ## License
 
