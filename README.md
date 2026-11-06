@@ -1,4 +1,4 @@
-# What Do Industrial Designers Talk About on Reddit?
+# What Do People Talk About on r/IndustrialDesign?
 
 **Embedding-based topic mapping of [r/IndustrialDesign](https://www.reddit.com/r/IndustrialDesign/): 431 top posts, 8 clusters, LLM-written cluster summaries.**
 
@@ -18,9 +18,9 @@
 
 ## Motivation
 
-Designers use online communities to show work, get critique, and ask about their careers. This project looks at one of them, [r/IndustrialDesign](https://www.reddit.com/r/IndustrialDesign/), with one descriptive question:
+Students, working designers, and hobbyists all post in r/IndustrialDesign: they show work, ask for critique, and ask about school and jobs. This project looks at what they talk about, with one descriptive question:
 
-> **What do industrial designers talk about when they talk to each other online?**
+> **What do people talk about in an online industrial design community?**
 
 It is a quick computational pass. I collected highly ranked posts, turned each one into a vector with a sentence-embedding model, grouped similar vectors, and asked an LLM to name each group. The method follows the first stage of Pataranutaporn et al.'s analysis of r/MyBoyfriendIsAI ([arXiv:2509.11391](https://arxiv.org/abs/2509.11391)); the [Method](#method-adapted-from-pataranutaporn-et-al-2025) section compares the two. The result is a rough map of topics, not a validated taxonomy (see [Limitations](#limitations)).
 
