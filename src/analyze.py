@@ -64,6 +64,9 @@ PAD = 0.42  # outer margin
 LABEL_COL = 3.62  # cluster-label column (chip + id + title) left of row charts
 ROW_H = 0.40  # height per cluster row
 DPI = 200
+FACET_GAP_X = 0.26
+FACET_RATIO = 0.72  # panel height / width
+FACET_PAD_X, FACET_PAD_Y = 0.06, 0.08  # data padding inside each panel
 
 # Words that appear in nearly every post of this community and carry no theme.
 DOMAIN_STOP_WORDS = {
@@ -289,53 +292,100 @@ def medoid_positions(df: pd.DataFrame) -> Dict[int, tuple[float, float]]:
 # Figures
 # --------------------------------------------------------------------------- #
 
-def plot_hero(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path, n_months: int) -> None:
-    """16:9 overview card: UMAP map with every cluster direct-labelled.
+def text_color(hex_color: str, min_contrast: float = 4.5) -> str:
+    """Darken a cluster colour toward INK until it reads as text on SURFACE (WCAG ratio)."""
+    from matplotlib.colors import to_hex, to_rgb
 
-    Rendered at 1600 x 900 px; the title is sized to stay legible as a ~400 px thumbnail.
+    def lum(rgb):
+        ch = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in rgb]
+        return 0.2126 * ch[0] + 0.7152 * ch[1] + 0.0722 * ch[2]
+
+    base, ink, bg = np.array(to_rgb(hex_color)), np.array(to_rgb(INK)), lum(to_rgb(SURFACE))
+    for t in np.linspace(0, 1, 41):
+        rgb = (1 - t) * base + t * ink
+        if (bg + 0.05) / (lum(rgb) + 0.05) >= min_contrast:
+            return to_hex(rgb)
+    return INK
+
+
+def facet_aspect(df: pd.DataFrame) -> float:
+    """Display aspect (y unit / x unit) used by the small-multiple panels, so the hero
+    map has the same proportions as the maps further down the README."""
+    pw = (FIG_W - 2 * PAD - 3 * FACET_GAP_X) / 4
+    ph = pw * FACET_RATIO
+    xs = (df["umap_x"].max() - df["umap_x"].min()) * (1 + 2 * FACET_PAD_X)
+    ys = (df["umap_y"].max() - df["umap_y"].min()) * (1 + 2 * FACET_PAD_Y)
+    return (ph / ys) / (pw / xs)
+
+
+def plot_hero(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path, n_months: int) -> None:
+    """16:9 overview card: the UMAP map with every cluster labelled in its own colour.
+
+    Layout is in inches from the top-left corner. The map keeps the small multiples'
+    proportions; labels sit in a left column (right-aligned), a right column
+    (left-aligned), and two slots above the map to the right of the headline.
     """
-    W, H = 16.0, 9.0
-    m = 0.62  # outer margin, inches
-    fig = plt.figure(figsize=(W, H), dpi=100)
-    fig.text(m / W, 1 - 0.50 / H, "r/IndustrialDesign  ·  topic map", fontsize=15,
+    W, H, m = 16.0, 9.0, 0.62
+    fig = plt.figure(figsize=(W, H))
+    fig.text(m / W, 1 - 0.52 / H, "r/IndustrialDesign  ·  topic map", fontsize=14,
              fontweight="semibold", color=MUTED, ha="left", va="top")
     fig.text(m / W, 1 - 0.84 / H, "What do industrial designers\ntalk about on Reddit?",
-             fontsize=44, fontweight="semibold", color=INK, ha="left", va="top", linespacing=1.04)
-    fig.text(m / W, 1 - 2.42 / H,
-             f"{len(df):,} top posts ({n_months}-month window), embedded with Qwen3-Embedding-0.6B, "
-             f"projected with UMAP\nand grouped into {len(tbl)} KMeans clusters. "
-             "Cluster titles were written by an LLM from each cluster's top posts.",
+             fontsize=42, fontweight="semibold", color=INK, ha="left", va="top", linespacing=1.04)
+    fig.text(m / W, 1 - 2.36 / H,
+             f"{len(df):,} top posts from a {n_months}-month window, grouped into {len(tbl)} topics.\n"
+             "Each dot is a post; posts that talk about similar things sit close together.",
              fontsize=14, color=INK_2, ha="left", va="top", linespacing=1.45)
 
-    ax = fig.add_axes([0.02, 0.015, 0.96, 1 - 3.30 / H - 0.015])
+    # Map scale: cloud is MAP_H inches tall with its top MAP_TOP inches from the top edge,
+    # centred at MAP_CX inches from the left; x scale follows the facet aspect.
+    MAP_TOP, MAP_H, MAP_CX = 3.30, 5.15, 8.45
+    x0, x1 = df["umap_x"].min(), df["umap_x"].max()
+    y0, y1 = df["umap_y"].min(), df["umap_y"].max()
+    ky = MAP_H / (y1 - y0)
+    kx = ky / facet_aspect(df)
+    ax = fig.add_axes([0, 0, 1, 1])
+    ax.set_axis_off()
+    ax.set_ylim(y1 - (H - MAP_TOP) / ky, y1 + MAP_TOP / ky)
+    xl = (x0 + x1) / 2 - MAP_CX / kx
+    ax.set_xlim(xl, xl + W / kx)
+    ylim_top = y1 + MAP_TOP / ky
+
+    def data(xi: float, yi: float) -> tuple[float, float]:
+        return xl + xi / kx, ylim_top - yi / ky
+
     for c in tbl.index:
         g = df[df["cluster"] == c]
-        ax.scatter(g["umap_x"], g["umap_y"], s=60, color=cluster_color(c), alpha=0.92,
-                   edgecolors=SURFACE, linewidths=1.3, zorder=2)
-    ax.set_axis_off()
-    # Fixed limits leave empty bands around the point cloud for the labels.
-    ax.set_xlim(-5.0, 4.7)
-    ax.set_ylim(-2.45, 3.95)
+        ax.scatter(g["umap_x"], g["umap_y"], s=58, color=cluster_color(c), alpha=0.95,
+                   edgecolors=SURFACE, linewidths=1.2, zorder=2)
 
-    halo = [pe.withStroke(linewidth=5, foreground=SURFACE)]
-    # Label anchors (UMAP data units), placed by hand in empty space around the cloud.
-    # The title sits above the anchor, the stats line below it.
-    anchors = {0: (-4.0, -0.55), 1: (-2.75, -1.75), 2: (3.05, 2.65), 3: (3.65, -1.0),
-               4: (-0.55, 3.45), 5: (-2.75, 3.45), 6: (1.45, 3.45), 7: (2.25, -2.0)}
-    for c, (x, y) in medoid_positions(df).items():
-        tx, ty = anchors.get(c, (x, y + 0.8))
-        # Leader: from the medoid to the edge of the label block (above or below it).
-        ly = ty - 0.33 if ty > y else ty + 0.62
-        ax.plot([x, tx], [y, ly], color=INK_2, lw=0.9, zorder=3, solid_capstyle="round")
-        ax.scatter([x], [y], s=80, color=cluster_color(c), edgecolors=INK, linewidths=1.5, zorder=4)
-        title = "\n".join(textwrap.wrap(tbl.loc[c, "title"], 26))
-        ax.annotate(title, (tx, ty), xytext=(0, 2), textcoords="offset points", ha="center",
-                    va="bottom", fontsize=15.5, fontweight="semibold", color=INK, linespacing=1.08,
-                    path_effects=halo, zorder=5)
-        ax.annotate(f"C{c}  ·  {tbl.loc[c, 'posts']} posts  ·  {tbl.loc[c, 'share']:.0%}", (tx, ty),
-                    xytext=(0, -3), textcoords="offset points", ha="center", va="top",
-                    fontsize=12.5, color=INK_2, path_effects=halo, zorder=5)
-    fig.savefig(fig_dir / "hero.png", dpi=100)
+    # (side, y in inches). Left labels end at LEFT_X, right labels start at RIGHT_X;
+    # "top" labels are centred at the given x (stored in the tuple's third slot).
+    LEFT_X, RIGHT_X = 4.30, 12.70
+    slots = {5: ("left", 3.75), 0: ("left", 5.35), 1: ("left", 7.25),
+             6: ("top", 2.55, 10.40), 4: ("right", 2.95),
+             2: ("right", 4.50), 3: ("right", 6.15), 7: ("right", 7.80)}
+    halo = [pe.withStroke(linewidth=4, foreground=SURFACE)]
+    for c, (mx, my) in medoid_positions(df).items():
+        side, ly, *rest = slots[c]
+        col, txt = cluster_color(c), text_color(cluster_color(c))
+        title = "\n".join(textwrap.wrap(tbl.loc[c, "title"], 24))
+        stats = f"C{c}  ·  {tbl.loc[c, 'posts']} posts  ·  {tbl.loc[c, 'share']:.0%}"
+        if side == "top":
+            lx = rest[0]
+            ha, end = "center", data(lx, ly + 0.34)
+        else:
+            lx = LEFT_X if side == "left" else RIGHT_X
+            ha = "right" if side == "left" else "left"
+            end = data(lx + (0.14 if side == "left" else -0.14), ly)
+        ax.plot([mx, end[0]], [my, end[1]], color=col, lw=1.1, alpha=0.9, zorder=3,
+                solid_capstyle="round")
+        ax.scatter([mx], [my], s=95, color=col, edgecolors=INK, linewidths=1.4, zorder=4)
+        ax.annotate(title, data(lx, ly), xytext=(0, 3), textcoords="offset points", ha=ha,
+                    va="bottom", fontsize=15, fontweight="semibold", color=txt,
+                    linespacing=1.08, path_effects=halo, zorder=5)
+        ax.annotate(stats, data(lx, ly), xytext=(0, -3), textcoords="offset points", ha=ha,
+                    va="top", fontsize=12, color=MUTED, path_effects=halo, zorder=5)
+    fig.savefig(fig_dir / "hero.png", dpi=125)
     plt.close(fig)
     logger.info("Saved %s", fig_dir / "hero.png")
 
@@ -343,9 +393,9 @@ def plot_hero(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path, n_months: int)
 def plot_umap_facets(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path) -> None:
     """Small multiples: each panel highlights one cluster against all posts."""
     order = list(tbl.index)
-    cols, gap_x, gap_y = 4, 0.26, 0.34
+    cols, gap_x, gap_y = 4, FACET_GAP_X, 0.34
     pw = (FIG_W - 2 * PAD - (cols - 1) * gap_x) / cols
-    ph, head = pw * 0.72, 0.62
+    ph, head = pw * FACET_RATIO, 0.62
     title = "Where each cluster sits on the map"
     sub = ("UMAP projection of the post embeddings. Coloured: posts in the cluster; grey: all other "
            "posts. Panels ordered by cluster size.")
@@ -354,7 +404,7 @@ def plot_umap_facets(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path) -> None
     top = header(fig, title, sub)
     xlim = (df["umap_x"].min(), df["umap_x"].max())
     ylim = (df["umap_y"].min(), df["umap_y"].max())
-    px, py = 0.06 * (xlim[1] - xlim[0]), 0.08 * (ylim[1] - ylim[0])
+    px, py = FACET_PAD_X * (xlim[1] - xlim[0]), FACET_PAD_Y * (ylim[1] - ylim[0])
     for i, c in enumerate(order):
         r, k = divmod(i, cols)
         left = PAD + k * (pw + gap_x)
