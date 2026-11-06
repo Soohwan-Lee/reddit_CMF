@@ -327,9 +327,9 @@ def plot_hero(df: pd.DataFrame, tbl: pd.DataFrame, fig_dir: Path, n_months: int)
     """
     W, H, m = 16.0, 9.0, 0.62
     fig = plt.figure(figsize=(W, H))
-    fig.text(m / W, 1 - 0.52 / H, "r/IndustrialDesign  ·  topic map", fontsize=14,
+    fig.text(m / W, 1 - 0.52 / H, "Reddit  ·  topic map", fontsize=14,
              fontweight="semibold", color=MUTED, ha="left", va="top")
-    fig.text(m / W, 1 - 0.84 / H, "What do industrial designers\ntalk about on Reddit?",
+    fig.text(m / W, 1 - 0.84 / H, "What do people talk about\non r/IndustrialDesign?",
              fontsize=42, fontweight="semibold", color=INK, ha="left", va="top", linespacing=1.04)
     fig.text(m / W, 1 - 2.36 / H,
              f"{len(df):,} top posts from a {n_months}-month window, grouped into {len(tbl)} topics.\n"
