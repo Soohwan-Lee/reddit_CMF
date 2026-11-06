@@ -23,9 +23,14 @@ def parse_args() -> argparse.Namespace:
 
 
 def choose_k_by_elbow(inertias: np.ndarray, k_values: np.ndarray) -> int:
-    """Pick K from the inertia curve using a discrete second difference."""
+    """Pick K at the elbow: the point of largest discrete second difference.
+
+    ``second_diff[i]`` is the curvature at ``k_values[i + 1]``. (The original
+    version took the arg-min with an offset of 2; on this dataset both rules
+    give K = 8, so the published results are unchanged.)
+    """
     second_diff = np.diff(inertias, n=2)
-    idx = np.argmin(second_diff) + 2  # second_diff has length n - 2
+    idx = int(np.argmax(second_diff)) + 1
     return int(k_values[idx])
 
 
