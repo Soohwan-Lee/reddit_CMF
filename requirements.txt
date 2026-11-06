@@ -1,0 +1,17 @@
+# Python 3.10+. Mirrors environment.yml for pip / uv users.
+pandas
+pyarrow
+numpy
+pyyaml
+orjson
+tqdm
+scikit-learn
+umap-learn
+plotly
+matplotlib
+praw
+requests
+sentence-transformers
+openai
+anthropic
+python-dotenv

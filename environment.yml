@@ -4,10 +4,13 @@ dependencies:
   - python=3.10
   - pandas
   - pyarrow
+  - numpy
+  - pyyaml
   - tqdm
   - scikit-learn
   - umap-learn
   - plotly
+  - matplotlib
   - pip
   - pip:
       - praw
@@ -16,4 +19,4 @@ dependencies:
       - sentence-transformers
       - anthropic
       - openai
-
+      - python-dotenv

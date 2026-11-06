@@ -20,9 +20,18 @@ models/**
 !models/.gitkeep
 figures/**
 !figures/.gitkeep
+# Static aggregate figures are committed; the interactive HTML (contains post titles) is not
+!figures/*.png
+!figures/*.svg
+figures/*.html
 
-# Taskmaster
+# Editor / agent tooling
 .taskmaster/
+.cursor/
+
+# Virtual environments
+.venv/
+venv/
 
 
 # Logs
